@@ -8,5 +8,5 @@
 *.tar
 *.gz
 */debian
-*-*/
+*.*/
 *debhelper*

@@ -1,9 +1,11 @@
 
 help () {
-  echo " * Usage:"
+  echo ""
+  echo ">>> Usage of build.sh:"
   echo "   ./build.sh package_name version"
   echo " * e.g:"
   echo "   ./build.sh iain 1.0-6"
+  echo "<<<"
   exit 1
 }
 
@@ -17,37 +19,52 @@ main () {
   if [[ -z $PACKAGE_NAME ]]; then
     echo "Package name not provided"
     return 1
-  fi
+    fi
   if ! [[ -d $PACKAGE_NAME ]]; then
-    echo "Package folder does not found: $(realpath $PACKAGE_NAME)"
+    echo "Package folder not found: $(realpath $PACKAGE_NAME)"
     return 1
-  fi
+    fi
   PACKAGE_FOLDER=$(realpath $PACKAGE_NAME)
 
   if [[ -z $TARGET_VERSION ]]; then
     echo "Target version not provided"
     return 1
-  fi
+    fi
 
 
 
 
 
 
-  if [[ $TARGET_VERSION == *"."* ]] && [[ $TARGET_VERSION == *"-"* ]] ; then
-    echo " * Version OK"
+  if [[ $TARGET_VERSION == *"."* ]]; then
+    if [[ $TARGET_VERSION == *"-"* ]]; then
+      VERSION=(${TARGET_VERSION//-/ })
+      UPSTREAM_VERSION=${VERSION[0]}
+      DEB_VERSION=${VERSION[1]}
+      unset VERSION
+    else
+      UPSTREAM_VERSION=$TARGET_VERSION
+      DEB_VERSION="0"
+      TARGET_VERSION="${UPSTREAM_VERSION}-${DEB_VERSION}"
+      fi
+
+
+    if [[ -n $UPSTREAM_VERSION ]];then
+      echo " * Version OK"
+    else
+      echo " * Version NOT ok (should be x.x-x) / current: $TARGET_VERSION"
+      return 1
+      fi
   else
     echo " * Version NOT ok (should be x.x-x) / current: $TARGET_VERSION"
     return 1
-  fi
-
-  VERSION=(${TARGET_VERSION//-/ })
-  UPSTREAM_VERSION=${VERSION[0]}
-  DEB_VERSION=${VERSION[1]}
+    fi
 
 
 
-  echo " * Target package: $TARGET_PACKAGE at: $PACKAGE_FOLDER"
+
+
+  echo " * Target package: $PACKAGE_NAME at: $PACKAGE_FOLDER"
   echo " * Target version: $TARGET_VERSION / Upstream Version: $UPSTREAM_VERSION / Debian Version: $DEB_VERSION"
 
 
@@ -56,29 +73,64 @@ main () {
 
   echo " * Generating tarball..."
   TARBALL="./${PACKAGE_NAME}_${UPSTREAM_VERSION}.orig.tar.gz"
-  tar -cz "./${PACKAGE_NAME}" -f $TARBALL || exit 1
+  rm $TARBALL
+  tar -cz "./${PACKAGE_NAME}" -f $TARBALL || return 1
   echo " * Tarball generated: $TARBALL"
 
 
   echo " * Extracting tarball..."
-  BUILD_FOLDER="./${PACKAGE_NAME}_${UPSTREAM_VERSION}"
-  mkdir $BUILD_FOLDER || echo "Delete previous folder with same version to continue" && exit 1
-  tar -xzf $TARBALL -C $BUILD_FOLDER --strip-components=1 || exit 1
-  echo " * Tarball extracted: $BUILD_FOLDER"
+  BUILD_FOLDER="./${PACKAGE_NAME}-${UPSTREAM_VERSION}"
+  SRC_FOLDER="${BUILD_FOLDER}/src"
+  if ! [[ -d $BUILD_FOLDER ]]; then mkdir $BUILD_FOLDER;fi;
+  if ! [[ -d $SRC_FOLDER ]]; then mkdir $SRC_FOLDER;fi;
+
+  tar -xzf $TARBALL -C $SRC_FOLDER --strip-components=2 || return 1
+  echo " * Tarball extracted: $SRC_FOLDER"
+
+  echo " * Copying debian..."
+  cp -r "./debian" "$BUILD_FOLDER" || return 1
+  echo " * Debian copied"
+
+  echo " * Entering build folder: $BUILD_FOLDER"
+  cd $BUILD_FOLDER || return 1
 
 
 
-  cd "$PACKAGE_FOLDER/../" || exit 1
+  if [[ -f "./debian/changelog" ]]; then
 
-  #tar -cz . -f iain1.orig.tar.gz
+     if [[ $DEB_VERSION != "0" ]]; then
+       echo " * Modifying changelog entry"
+       dch -v $TARGET_VERSION
+       else
+         echo " * Adding changelog entry"
+         dch -i
+         fi
+  else
+    echo " * Writing new changelog"
+    dch --create -v "${TARGET_VERSION}" -u low --package $PACKAGE_NAME
+    fi
+  cp "./debian/changelog" "$START_DIR/debian"
+
 
   return 0
 }
 
+START_DIR=$(pwd)
+
+show_error () {
+  # shellcheck disable=SC2164
+  cd "$START_DIR"
+  echo " * ERROR: build failed somewhere"
+  help
+  exit 1
+}
+
+
+
 if [[ $* == "--help" ]]; then
   help
 else
-  main "$@" || help
+  main "$@" || show_error
 fi
 
 
