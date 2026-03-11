@@ -1,0 +1,12 @@
+Source: iain
+Maintainer: Lars Wirzenius <liw@liw.fi>
+Section: misc
+Priority: optional
+Standards-Version: 4.7.0
+Build-Depends: debhelper-compat (= 13)
+
+Package: iainrc
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Python project initialiser, 
+ with git utilities and other stuff.

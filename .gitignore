@@ -1,0 +1,12 @@
+.idea
+
+
+*.deb
+*.dsc
+*.build*
+*.changes
+*.tar
+*.gz
+*/debian
+*-*/
+*debhelper*
