@@ -1,10 +1,11 @@
 prefix = /usr/local
 
-any:
+all:
 
 install:
+	install iain $(DESTDIR)$(prefix)/bin
 	install iainrc $(DESTDIR)$(prefix)/bin
-	install scripts/* $(DESTDIR)$(prefix)/share/iain/scripts
+	install scripts/.iainrc $(DESTDIR)$(prefix)/share/iain/scripts
 clean:
 
 

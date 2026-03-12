@@ -5,6 +5,11 @@ Priority: optional
 Standards-Version: 4.7.0
 Build-Depends: debhelper-compat (= 13)
 
+Package: iain
+Architecture: all
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Configuration for this package.
+
 Package: iainrc
 Architecture: all
 Depends: ${shlibs:Depends}, ${misc:Depends}

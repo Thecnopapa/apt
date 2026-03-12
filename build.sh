@@ -14,20 +14,23 @@ main () {
 
   PACKAGE_NAME=$1
   TARGET_VERSION=$2
-
+  MISSING_INPUT=0
 
   if [[ -z $PACKAGE_NAME ]]; then
     echo "Package name not provided"
+    MISSING_INPUT=1
     return 1
     fi
   if ! [[ -d $PACKAGE_NAME ]]; then
     echo "Package folder not found: $(realpath $PACKAGE_NAME)"
+    MISSING_INPUT=1
     return 1
     fi
   PACKAGE_FOLDER=$(realpath $PACKAGE_NAME)
 
   if [[ -z $TARGET_VERSION ]]; then
     echo "Target version not provided"
+    MISSING_INPUT=1
     return 1
     fi
 
@@ -53,10 +56,12 @@ main () {
       echo " * Version OK"
     else
       echo " * Version NOT ok (should be x.x-x) / current: $TARGET_VERSION"
+      MISSING_INPUT=1
       return 1
       fi
   else
     echo " * Version NOT ok (should be x.x-x) / current: $TARGET_VERSION"
+    MISSING_INPUT=1
     return 1
     fi
 
@@ -80,7 +85,7 @@ main () {
 
   echo " * Extracting tarball..."
   BUILD_FOLDER="./${PACKAGE_NAME}-${UPSTREAM_VERSION}"
-  SRC_FOLDER="${BUILD_FOLDER}/src"
+  SRC_FOLDER="${BUILD_FOLDER}"
   if ! [[ -d $BUILD_FOLDER ]]; then mkdir $BUILD_FOLDER;fi;
   if ! [[ -d $SRC_FOLDER ]]; then mkdir $SRC_FOLDER;fi;
 
@@ -109,7 +114,13 @@ main () {
     echo " * Writing new changelog"
     dch --create -v "${TARGET_VERSION}" -u low --package $PACKAGE_NAME
     fi
+
   cp "./debian/changelog" "$START_DIR/debian"
+  echo " * Changelog saved"
+
+  echo " * Starting build..."
+  debuild -us -uc || return 1
+  echo " * Build complete"
 
 
   return 0
@@ -117,11 +128,15 @@ main () {
 
 START_DIR=$(pwd)
 
-show_error () {
+check_error () {
+
   # shellcheck disable=SC2164
   cd "$START_DIR"
-  echo " * ERROR: build failed somewhere"
-  help
+  if [[ $MISSING_INPUT == "1" ]]; then
+    help
+  else
+    echo " * ERROR: build failed somewhere"
+    fi
   exit 1
 }
 
@@ -130,7 +145,7 @@ show_error () {
 if [[ $* == "--help" ]]; then
   help
 else
-  main "$@" || show_error
+   main "$@" || check_error
 fi
 
 
